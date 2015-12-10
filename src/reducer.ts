@@ -1,45 +1,87 @@
+
 "use strict";
 
-var push = Array.prototype.push;
+export type Complexity = number;
+export type Lloc = number;
+export type Operands = string[];
+export type Operators = any[];
+type ShorthandStats = [Lloc, Complexity, Operands, Operators];
 
-function propagateStats(aggregate, current, child) {
+export interface Stats {
+  lloc: Lloc;
+  cyclomatic: Complexity;
+  operands: Operands;
+  operators: Operators;
+}
+
+export interface NodeReport {
+  aggregate: Stats;
+  stats: {
+    type: string;
+    lloc: Lloc;
+    cyclomatic: Complexity;
+    operators: Operators;
+    operands: Operands;
+    rootType: boolean;
+    functionType: boolean;
+  }
+}
+
+export interface ShiftNode {
+  type: string;
+  complexity?: NodeReport;
+}
+
+function propagateStats(report:NodeReport, child:ShiftNode) {
   // if we don't have a properly populated child then we're doing
   // testing on an individual reduction function
-  if (!('aggregateStats' in child)) return current;
+  if (!('complexity' in child)) return;
+
+  if (!child.complexity.stats.functionType) {
+    report.aggregate.lloc +=
+        child.complexity.stats.lloc + (child.complexity.aggregate.lloc || 0);
+    report.aggregate.cyclomatic +=
+        child.complexity.stats.cyclomatic + (child.complexity.aggregate.cyclomatic || 0);
+    report.aggregate.operators.push(
+        ...child.complexity.stats.operators,
+        ...child.complexity.aggregate.operators);
+    report.aggregate.operands.push(
+        ...child.complexity.stats.operands,
+        ...child.complexity.aggregate.operands);
+  }
+}
+
+function isFunctionType(type:string) {
+  switch (type) {
+    case 'FunctionDeclaration':
+    case 'FunctionExpression':
+    case 'ArrowExpression':
+    case 'Method':
+      return true;
+  }
+  return false;
+}
+
+function isRootType(type:string) {
+  switch (type) {
+    case 'FunctionDeclaration':
+    case 'FunctionExpression':
+    case 'ArrowExpression':
+    case 'Method':
+    case 'Module':
+    case 'Script':
+      return true;
+  }
+  return false;
+}
+
+class ComplexityReducer {
+
+  lloc: Lloc; 
+  operators: Operators;
+  operands: Operands;
+  functions: ShiftNode[];
   
-  if (!child.stats.functionType) {
-    aggregate.lloc += child.stats.lloc + (child.aggregateStats.lloc || 0);
-    aggregate.cyclomatic += child.stats.cyclomatic + (child.aggregateStats.cyclomatic || 0);
-    aggregate.operators.push(...child.stats.operators, ...child.aggregateStats.operators);
-    aggregate.operands.push(...child.stats.operands, ...child.aggregateStats.operands);
-  }
-}
-
-function isFunctionType(type) {
-  switch (type) {
-  case 'FunctionDeclaration':
-  case 'FunctionExpression':
-  case 'ArrowExpression':
-  case 'Method':
-    return true;
-  }
-  return false;
-}
-
-function isRootType(type) {
-  switch (type) {
-  case 'FunctionDeclaration':
-  case 'FunctionExpression':
-  case 'ArrowExpression':
-  case 'Method':
-  case 'Module':
-  case 'Script':
-    return true;
-  }
-  return false;
-}
-
-export default class ComplexityReducer {
   constructor() {
     this.lloc = 0;
     this.operators = [];
@@ -47,68 +89,69 @@ export default class ComplexityReducer {
     this.functions = [];
   }
   
-  updateStats(node, children, stats) {
-
-    var aggregate = {
-      lloc: 0,
-      cyclomatic: 0,
-      operators: [],
-      operands: []
-    };
+  private updateStats(node:ShiftNode, children:string[], stats:ShorthandStats) {
     
-    var nodeStats = {
-      type: node.type,
-      lloc: 0,
-      cyclomatic:0,
-      operators: [],
-      operands: [],
-      rootType: isRootType(node.type),
-      functionType: isFunctionType(node.type)
-    };
+    var report:NodeReport = {
+      aggregate: {
+        lloc: 0,
+        cyclomatic: 0,
+        operators: [],
+        operands: []
+      },
+      stats: {
+        type: node.type,
+        lloc: 0,
+        cyclomatic:0,
+        operators: [],
+        operands: [],
+        rootType: isRootType(node.type),
+        functionType: isFunctionType(node.type)
+      }
+    }; 
 
     for (var i = 0; i < children.length; i++) {
       let childProp = children[i];
       // istanbul ignore next
       if (!(childProp in node)) throw new Error('Invalid child property specified: ' + node.type + '['+childProp+']');
-      let child = node[childProp];
+      let child:ShiftNode | ShiftNode[] = node[childProp];
+
       if (!child) continue;
+      
       if (Array.isArray(child)) {
-        child.forEach(_ => propagateStats(aggregate, nodeStats, _));
+        child.forEach(_ => propagateStats(report, _));
       } else {
-        propagateStats(aggregate, nodeStats, child);
+        propagateStats(report, child);
       }
     }
     
     this.lloc += stats[0];
-    //this.cyclomatic += stats[1];
-    nodeStats.lloc += stats[0];
-    nodeStats.cyclomatic += stats[1];
+    report.stats.lloc += stats[0];
+    report.stats.cyclomatic += stats[1];
     
-    if (nodeStats.functionType) {
+    if (report.stats.functionType) {
       this.functions.push(node);
     }
 
     if (stats[2]) {
-      Array.prototype.push.apply(nodeStats.operators, stats[2]);
-      Array.prototype.push.apply(this.operators, stats[2]);
+      report.stats.operators.push(...stats[2]);
+      this.operators.push(...stats[2]);
     }
 
     if (stats[3]) {
-      Array.prototype.push.apply(nodeStats.operands, stats[3]);
-      Array.prototype.push.apply(this.operands, stats[3]);
+      report.stats.operands.push(...stats[3]);
+      this.operands.push(...stats[3]);
     }
 
-    if (nodeStats.rootType) {
+    if (report.stats.rootType) {
       // every path starts at 1 cyclomatic, so add our missing 1
-      nodeStats.cyclomatic++;
-      aggregate.cyclomatic += nodeStats.cyclomatic;
-      aggregate.lloc += nodeStats.lloc;
-      Array.prototype.push.apply(aggregate.operators, nodeStats.operators);
-      Array.prototype.push.apply(aggregate.operands, nodeStats.operands);
+      report.stats.cyclomatic++;
+      report.aggregate.cyclomatic += report.stats.cyclomatic;
+      //report.aggregate.lloc += report.stats.lloc;
+      //report.aggregate.operators.push(...report.stats.operators);
+      //report.aggregate.operands.push(...report.stats.operands);
     }
 
-    node.aggregateStats = aggregate;
-    node.stats = nodeStats;
+    node.complexity = report;
 
     return node;
   }
@@ -127,7 +170,7 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['binding', 'expression'], [0, 0, ['='], []]);
   }
   reduceBinaryExpression(node, state) {
-    return this.updateStats(state, ['left', 'right'], [0,node.operator === '||' ? 1 : 0,[node.operator]]);
+    return this.updateStats(state, ['left', 'right'], [0, node.operator === '||' ? 1 : 0, [node.operator], []]);
   }
   reduceBindingIdentifier(node, state) {
     return this.updateStats(state, [], [0,0,undefined,[node.name]]);
@@ -164,16 +207,16 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['method'], [0,0,[],[]]);
   }
   reduceClassExpression(node, state) {
-    return this.updateStats(state, ['name', 'super', 'elements'], [0,0,node.super ? ['class', 'extends'] : ['class']]);
+    return this.updateStats(state, ['name', 'super', 'elements'], [0,0,node.super ? ['class', 'extends'] : ['class'], []]);
   }
   reduceCompoundAssignmentExpression(node, state) {
-    return this.updateStats(state, ['binding', 'expression'], [0,0,[node.operator]]);
+    return this.updateStats(state, ['binding', 'expression'], [0,0,[node.operator],[]]);
   }
   reduceComputedMemberExpression(node, state) {
     var onExtendedExpression = [
       'ArrowExpression','FunctionExpression','ArrayExpression','ObjectExpression','ClassExpression'
     ].indexOf(node.object.type) > -1;
-    return this.updateStats(state, ['object', 'expression'], [onExtendedExpression ? 1 : 0,0,['.']]);
+    return this.updateStats(state, ['object', 'expression'], [onExtendedExpression ? 1 : 0,0,['.'], null]);
   }
   reduceComputedPropertyName(node, state) {
     return this.updateStats(state, ['expression'], [0,0,[],[]]);
@@ -209,7 +252,7 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['body'], [0, 0, ['export'], []]);
   }
   reduceExportFrom(node, state) {
-    return this.updateStats(state, [], [0,0,['export','from']]);
+    return this.updateStats(state, [], [0,0,['export','from'],null]);
   }
   reduceExportSpecifier(node, state) {
     return this.updateStats(state, [], [0,0,[],[]]);
@@ -227,13 +270,13 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['init','test','update','body'], [1, 1, ['for'], []]);
   }
   reduceFormalParameters(node, state) {
-    return this.updateStats(state, ['items','rest'], [0,0,node.rest ? ['...'] : undefined]);
+    return this.updateStats(state, ['items','rest'], [0,0,node.rest ? ['...'] : undefined,null]);
   }
   reduceFunctionBody(node, state) {
     return this.updateStats(state, ['statements'], [0,0,[],[]]);
   }
   reduceFunctionDeclaration(node, state) {
-    return this.updateStats(state, ['name', 'params', 'body'], [1,0,[node.isGenerator ? 'function*' : 'function']],[]);
+    return this.updateStats(state, ['name', 'params', 'body'], [1,0,[node.isGenerator ? 'function*' : 'function'],null]);
   }
   reduceFunctionExpression(node, state) {
     return this.updateStats(state, ['name', 'params', 'body'], [0,0,[node.isGenerator ? 'function*' : 'function'],node.name ? undefined : ['<anonymous>']]);
@@ -246,13 +289,13 @@ export default class ComplexityReducer {
   }
   reduceIfStatement(node, state) {
     var alt = node.alternate;
-    return this.updateStats(state, ['test','consequent','alternate'], [alt ? 2 : 1,1,alt ? ['if','else'] : ['if']]);
+    return this.updateStats(state, ['test','consequent','alternate'], [alt ? 2 : 1,1,alt ? ['if','else'] : ['if'],null]);
   }
   reduceImport(node, state) {
     return this.updateStats(state, ['defaultBinding','namedImports'], [1, 0, ['import'], []]);
   }
   reduceImportNamespace(node, state) {
-    return this.updateStats(state, ['defaultBinding','namespaceBinding'], [1,0,['import','import*']]);
+    return this.updateStats(state, ['defaultBinding','namespaceBinding'], [1,0,['import','import*'],null]);
   }
   reduceImportSpecifier(node, state) {
     return this.updateStats(state, ['binding'], [0, 0, ['import{}'], []]);
@@ -261,22 +304,22 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['body'], [0,0,['label'], [node.label]]);
   }
   reduceLiteralBooleanExpression(node, state) {
-    return this.updateStats(state, [], [0,0,undefined,[node.value]]);
+    return this.updateStats(state, [], [0,0,null,[node.value]]);
   }
   reduceLiteralInfinityExpression(node, state) {
-    return this.updateStats(state, [], [0,0,undefined,[2e308]]);
+    return this.updateStats(state, [], [0,0,null,[2e308]]);
   }
   reduceLiteralNullExpression(node, state) {
-    return this.updateStats(state, [], [0,0,undefined,[null]]);
+    return this.updateStats(state, [], [0,0,null,[null]]);
   }
   reduceLiteralNumericExpression(node, state) {
-    return this.updateStats(state, [], [0,0,undefined,[node.value]]);
+    return this.updateStats(state, [], [0,0,null,[node.value]]);
   }
   reduceLiteralRegExpExpression(node, state) {
-    return this.updateStats(state, [], [0,0,undefined,[node.pattern]]);
+    return this.updateStats(state, [], [0,0,null,[node.pattern]]);
   }
   reduceLiteralStringExpression(node, state) {
-    return this.updateStats(state, [], [0,0,undefined,[node.value]]);
+    return this.updateStats(state, [], [0,0,null,[node.value]]);
   }
   reduceMethod(node, state) {
     return this.updateStats(state, ['name','params','body'], [1, 0, ['function'], []]);
@@ -288,7 +331,7 @@ export default class ComplexityReducer {
     var onExtendedExpression = [
         'FunctionExpression','ClassExpression'
       ].indexOf(node.callee.type) > -1;
-    return this.updateStats(state, ['callee', 'arguments'], [onExtendedExpression ? 1 : 0, 0, ['new']]);
+    return this.updateStats(state, ['callee', 'arguments'], [onExtendedExpression ? 1 : 0, 0, ['new'],null]);
   }
   reduceNewTargetExpression(node, state) {
     return this.updateStats(state, [], [0,0,undefined,['new.target']]);
@@ -340,7 +383,7 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['discriminant','preDefaultCases','defaultCase','postDefaultCases'], [1, 0, ['switch'], []]);
   }
   reduceTemplateElement(node, state) {
-    return this.updateStats(state, [], [0,0 ]);
+    return this.updateStats(state, [], [0,0,null,null]);
   }
   reduceTemplateExpression(node, state) {
     return this.updateStats(state, ['tag', 'elements'], [0, 0, ['``'], []]);
@@ -355,7 +398,7 @@ export default class ComplexityReducer {
     return this.updateStats(state, ['body','catchClause'], [1, 0, ['try'], []]);
   }
   reduceTryFinallyStatement(node, state) {
-    return this.updateStats(state, ['body','catchClause','finalizer'], [1,0,['try', 'finally']]);
+    return this.updateStats(state, ['body','catchClause','finalizer'], [1,0,['try', 'finally'],null]);
   }
   reduceUnaryExpression(node, state) {
     return this.updateStats(state, ['operand'], [0,0,[node.operator],[]]);
@@ -386,4 +429,6 @@ export default class ComplexityReducer {
   }
 
 }
+
+export default ComplexityReducer;
 

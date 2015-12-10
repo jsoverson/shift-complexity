@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "declaration": true,
+        "noEmitOnError": true,
+        "module": "commonjs",
+        "target": "es3",
+        "noImplicitAny": false,
+        "outDir": "../dist",
+        "sourceMap": true
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}
