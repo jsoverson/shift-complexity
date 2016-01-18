@@ -25,7 +25,7 @@ export interface ComplexityReport {
     functionComplexity: number;
     functionLloc: number;
   };
-  lloc: number;
+  lloc: number;``
   functions: ComputedStats[];
   operators: Operators;
   operands: Operands;
