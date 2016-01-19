@@ -1,39 +1,10 @@
-/// <reference path="../typings/node/node.d.ts" />
 
 var uniq = require('lodash/array/uniq');
-var reduce = require( 'shift-reducer' )["default"]; // specified as computed property to fool webstorm warning.
+var reduce = require( 'shift-reducer').default;
 
-import ComplexityReducer, {ShiftNode, Operands, Operators, Stats} from './reducer';
+import ComplexityReducer from './reducer';
 
-export interface ComputedStats extends Stats {
-  distinctOperands: Operands;
-  distinctOperators: Operators;
-  vocabulary: number;
-  length: number;
-  volume: number;
-  difficulty: number;
-  effort: number;
-  time: number;
-  bugs: number;
-  maintainability: number;
-}
-
-export interface ComplexityReport {
-  average : {
-    complexity : number;
-    lloc : number;
-    functionComplexity: number;
-    functionLloc: number;
-  };
-  lloc: number;``
-  functions: ComputedStats[];
-  operators: Operators;
-  operands: Operands;
-  distinctOperators: Operators;
-  distinctOperands: Operands;
-}
-
-function analyze(ast:ShiftNode):ComplexityReport {
+function analyze(ast) {
   if (typeof ast !== 'object') throw new Error('invalid argument to analyze(), AST required');
   
   var reducer = new ComplexityReducer();
@@ -55,24 +26,24 @@ function analyze(ast:ShiftNode):ComplexityReport {
   };
 }
 
-function isRootNode(ast:ShiftNode) {
+function isRootNode(ast) {
   return ast.type === 'Module' || ast.type === 'Script';
 }
 
-function calculateAverage(prop:string, reducer:ComplexityReducer, ast:ShiftNode) {
-  let scopes:ShiftNode[] = reducer.functions.concat();
+function calculateAverage(prop, reducer, ast) {
+  let scopes = reducer.functions.concat();
   if (ast && isRootNode(ast)) scopes.push(ast);
 
   var total = scopes.reduce((p,n) => p + n.complexity.aggregate[prop], 0);
   return total / scopes.length;
 }
 
-function summarizeFunctions(reducer:ComplexityReducer):ComputedStats[] {
+function summarizeFunctions(reducer) {
   return reducer.functions.map(fn => computeStats(fn.complexity.aggregate));
 }
 
-function computeStats(stats:Stats) {
-  var computed:ComputedStats = {
+function computeStats(stats) {
+  var computed = {
     lloc: stats.lloc,
     cyclomatic: stats.cyclomatic,
     operators: stats.operators,
@@ -96,6 +67,7 @@ function computeStats(stats:Stats) {
   computed.effort = computed.difficulty * computed.volume;
   computed.time = 1000 * (computed.effort / 18);
   computed.bugs = Math.pow(computed.effort, 2/3) / 3000;
+  
   computed.maintainability =
       Math.max(0, (
               171 -

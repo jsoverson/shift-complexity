@@ -1,28 +1,28 @@
 {
   "name": "shift-complexity",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "babel --auxiliary-comment 'istanbul ignore next' --source-maps-inline --out-dir dist src --presets es2015",
-    "build-browser": "npm run build && browserify -s complexity -o dist/shift-complexity.js dist/index.js",
-    "check-coverage": "istanbul check-coverage --statements 100 --functions 100 --branches 100 --lines 100",
-    "generate-coverage": "istanbul cover _mocha -- --inline-diffs --check-leaks --ui tdd --reporter dot --recursive test",
-    "test": "mocha --inline-diffs --check-leaks --ui tdd --reporter dot --recursive test",
-    "watch": "babel --auxiliary-comment 'istanbul ignore next' --source-maps-inline --out-dir dist src --watch --presets es2015",
-    "watch-ts": "tsc -w --p src ",
+    "build": "babel --out-dir dist src",
+    "watch": "babel -w --out-dir dist src",
+    "test": "mocha --inline-diffs --check-leaks --compilers js:babel-register --ui tdd --recursive test",
+    "coverage": "babel-node ./node_modules/.bin/isparta cover --report text --report html _mocha -- --inline-diffs --check-leaks --ui tdd --reporter dot --recursive test ",
+    "lint": "eslint src test",
     "clean": "rm -rf dist/*"
   },
-  "author": "Shape Security",
-  "license": "NONE",
+  "author": "Jarrod Overson",
+  "license": "MIT",
   "dependencies": {
     "lodash": "^3.10.1",
     "shift-reducer": "^2.0.3"
   },
   "devDependencies": {
     "babel": "^6.3.26",
+    "babel-cli": "^6.4.0",
     "babel-core": "^6.4.0",
     "babel-preset-es2015": "^6.3.13",
+    "babel-register": "^6.4.3",
     "chai": "^3.4.1",
     "eslint": "^1.10.3",
     "isparta": "^4.0.0",

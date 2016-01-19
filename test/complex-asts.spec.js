@@ -1,20 +1,14 @@
-/// <reference path="../typings/node/node.d.ts" />
-/// <reference path="../typings/mocha/mocha.d.ts" />
 
 import * as assert from 'assert';
 
 import Reducer from '../src/reducer';
 
 suite('Complex ASTs', function () {
-  "use strict";
+  'use strict';
 
   var parseModule = require('shift-parser').parseModule;
 
-  var reduce = require( 'shift-reducer' )["default"]; // specified as computed property to fool webstorm warning.
-
-  function parse(program) {
-    return parseModule(program,{loc:true}).items[0];
-  }
+  var reduce = require( 'shift-reducer' ).default;
 
   suite('Tree reductions', function () {
     var reducer;
@@ -62,7 +56,7 @@ suite('Complex ASTs', function () {
     });
 
     test('ternary condtional expression returned from function', function () {
-      var result = reduce(reducer, parseModule('function foo () { return true ? "bar" : "baz"; }'));
+      reduce(reducer, parseModule('function foo () { return true ? "bar" : "baz"; }'));
       assert.strictEqual(reducer.lloc, 2);
       assert.strictEqual(reducer.functions.length, 1);
       assert.strictEqual(reducer.functions[0].name.name, 'foo');
@@ -73,7 +67,7 @@ suite('Complex ASTs', function () {
     });
 
     test('ternary condtional expression returned from function', function () {
-      var result = reduce(reducer, parseModule('function foo () { return a || b; }'));
+      reduce(reducer, parseModule('function foo () { return a || b; }'));
       assert.strictEqual(reducer.lloc, 2);
       assert.strictEqual(reducer.functions[0].name.name, 'foo');
       assert.strictEqual(reducer.functions[0].complexity.aggregate.cyclomatic, 2);
@@ -83,7 +77,7 @@ suite('Complex ASTs', function () {
     });
 
     test('anonymous function returned from function', function () {
-      var result = reduce(reducer, parseModule('function a () { return function () { return; }; }'));
+      reduce(reducer, parseModule('function a () { return function () { return; }; }'));
       assert.strictEqual(reducer.lloc, 3);
       assert.strictEqual(reducer.functions.length, 2);
       assert.strictEqual(reducer.functions[0].name, null);
@@ -218,7 +212,7 @@ suite('Complex ASTs', function () {
     });
 
     test('rest&spread', function () {
-      var result = reduce(reducer, parseModule('function a(b, ...c) {return d(...c)}'));
+      reduce(reducer, parseModule('function a(b, ...c) {return d(...c)}'));
       assert.strictEqual(reducer.lloc, 2);
       assert.strictEqual(reducer.functions.length, 1);
       assert.strictEqual(reducer.operators.length, 5);

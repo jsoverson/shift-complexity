@@ -1,14 +1,10 @@
-/// <reference path="../typings/node/node.d.ts" />
-/// <reference path="../typings/mocha/mocha.d.ts" />
-
-"use strict";
 
 import * as assert from 'assert';
 
 import Reducer from '../src/reducer';
 
 suite('Reducer', function () {
-  "use strict";
+  'use strict';
 
   var parseModule = require('shift-parser').parseModule;
   var parseScript = require('shift-parser').parseScript;

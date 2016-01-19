@@ -1,5 +1,3 @@
-/// <reference path="../typings/node/node.d.ts" />
-/// <reference path="../typings/mocha/mocha.d.ts" />
 
 import * as assert from 'assert';
 
@@ -8,7 +6,7 @@ import complexity from '../src/';
 suite('module:', function () {
   var parse = require('shift-parser').parseModule;
 
-  function run(src:string) {
+  function run(src) {
     return complexity.analyze(parse(src)); 
   }
   
@@ -40,5 +38,5 @@ suite('module:', function () {
       assert.equal(report.functions[1].lloc, 5);
       assert.equal(report.functions[1].cyclomatic, 3);
     });
-  })
+  });
 });
