@@ -1,5 +1,5 @@
 
-import * as assert from 'assert';
+import assert from 'assert';
 
 import complexity from '../src/';
 
@@ -37,6 +37,10 @@ suite('module:', function () {
       assert.equal(report.functions[0].cyclomatic, 2);
       assert.equal(report.functions[1].lloc, 5);
       assert.equal(report.functions[1].cyclomatic, 3);
+      assert.equal(report.operators.length, 8);
+      assert.equal(report.operands.length, 10);
+      assert.equal(report.distinctOperators.length, 5);
+      assert.equal(report.distinctOperands.length, 7);
     });
   });
 });

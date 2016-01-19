@@ -1,8 +1,11 @@
 
-var uniq = require('lodash/array/uniq');
 var reduce = require( 'shift-reducer').default;
 
 import ComplexityReducer from './reducer';
+
+function uniq(array) {
+  return Object.keys(array.reduce((p,n) => {p[n] = true; return p;},{}));
+}
 
 function analyze(ast) {
   if (typeof ast !== 'object') throw new Error('invalid argument to analyze(), AST required');
