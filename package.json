@@ -10,25 +10,22 @@
     "coverage": "babel-node ./node_modules/.bin/isparta cover --report text --report html _mocha -- --inline-diffs --check-leaks --ui tdd --reporter dot --recursive test ",
     "lint": "eslint src test",
     "clean": "rm -rf dist/*",
-    "browser": "browserify dist/index.js -s complexity -x shift-reducer > dist/shift-complexity.js",
-    "browser-vendor": "browserify -r shift-reducer -r shift-parser > web-vendor.js",
     "release": "git-dirty && npm run clean && npm run lint && npm test && npm run build"
   },
   "author": "Jarrod Overson",
   "license": "MIT",
   "dependencies": {
-    "shift-reducer": "^2.0.3"
+    "shift-reducer": "^3.0.3"
   },
   "devDependencies": {
-    "babel": "^6.3.26",
-    "babel-cli": "^6.4.0",
-    "babel-core": "^6.4.0",
-    "babel-preset-es2015": "^6.3.13",
-    "babel-register": "^6.4.3",
+    "babel-cli": "^6.5.1",
+    "babel-core": "^6.5.2",
+    "babel-preset-es2015": "^6.5.0",
+    "babel-register": "^6.5.2",
     "eslint": "^1.10.3",
     "git-dirty": "^1.0.0",
     "isparta": "^4.0.0",
     "mocha": "^2.3.4",
-    "shift-parser": "^3.0.4"
+    "shift-parser": "^4.1.0"
   }
 }

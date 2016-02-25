@@ -4,17 +4,22 @@ function propagateStats(report, child) {
   // testing on an individual reduction function
   if (!('complexity' in child)) return;
 
-  if (!child.complexity.stats.functionType) {
-    report.aggregate.lloc +=
-      child.complexity.stats.lloc + (child.complexity.aggregate.lloc || 0);
-    report.aggregate.cyclomatic +=
-      child.complexity.stats.cyclomatic + (child.complexity.aggregate.cyclomatic || 0);
-    report.aggregate.operators.push(
-      ...child.complexity.stats.operators,
-      ...child.complexity.aggregate.operators);
-    report.aggregate.operands.push(
-      ...child.complexity.stats.operands,
-      ...child.complexity.aggregate.operands);
+  if (!child.complexity.node.functionType) {
+    report.body.lloc +=
+      child.complexity.node.lloc + (child.complexity.body.lloc || 0);
+    report.body.cyclomatic +=
+      child.complexity.node.cyclomatic + (child.complexity.body.cyclomatic || 0);
+    report.body.operators.push(
+      ...child.complexity.node.operators,
+      ...child.complexity.body.operators);
+    report.body.operands.push(
+      ...child.complexity.node.operands,
+      ...child.complexity.body.operands);
+  } else {
+    report.body.lloc += child.complexity.node.lloc;
+    report.body.cyclomatic += child.complexity.node.cyclomatic;
+    report.body.operators.push(...child.complexity.node.operators);
+    report.body.operands.push(...child.complexity.node.operands);
   }
 }
 
@@ -46,6 +51,7 @@ class ComplexityReducer {
 
   constructor() {
     this.lloc = 0;
+    this.cyclomatic = 0;
     this.operators = [];
     this.operands = [];
     this.functions = [];
@@ -54,13 +60,13 @@ class ComplexityReducer {
   updateStats(node, children, stats) {
 
     var report = {
-      aggregate: {
+      body: {
         lloc: 0,
         cyclomatic: 0,
         operators: [],
         operands: []
       },
-      stats: {
+      node: {
         type: node.type,
         lloc: 0,
         cyclomatic: 0,
@@ -71,6 +77,7 @@ class ComplexityReducer {
       }
     };
 
+    
     for (var i = 0; i < children.length; i++) {
       let childProp = children[i];
       // istanbul ignore next
@@ -79,38 +86,48 @@ class ComplexityReducer {
 
       if (!child) continue;
 
-      if (Array.isArray(child)) {
-        child.forEach(_ => propagateStats(report, _));
+      if (report.node.functionType && child.type === 'BindingIdentifier') {
+        report.node.operands.push(child.name);
       } else {
-        propagateStats(report, child);
+        if (Array.isArray(child)) {
+          child.forEach(_ => propagateStats(report, _));
+        } else {
+          propagateStats(report, child);
+        }
       }
     }
 
     this.lloc += stats[0];
-    report.stats.lloc += stats[0];
-    report.stats.cyclomatic += stats[1];
+    report.node.lloc += stats[0];
+    this.cyclomatic += stats[1];
+    report.node.cyclomatic += stats[1];
 
-    if (report.stats.functionType) {
+    if (report.node.functionType) {
       this.functions.push(node);
+    }
+    
+    if (node.type === 'ArrowExpression' && node.body.type !== 'FunctionBody') {
+      report.body.lloc++;
     }
 
     if (stats[2]) {
-      report.stats.operators.push(...stats[2]);
+      report.node.operators.push(...stats[2]);
       this.operators.push(...stats[2]);
     }
 
     if (stats[3]) {
-      report.stats.operands.push(...stats[3]);
+      report.node.operands.push(...stats[3]);
       this.operands.push(...stats[3]);
     }
 
-    if (report.stats.rootType) {
+    if (report.node.rootType) {
       // every path starts at 1 cyclomatic, so add our missing 1
-      report.stats.cyclomatic++;
-      report.aggregate.cyclomatic += report.stats.cyclomatic;
-      //report.aggregate.lloc += report.stats.lloc;
-      //report.aggregate.operators.push(...report.stats.operators);
-      //report.aggregate.operands.push(...report.stats.operands);
+      report.body.cyclomatic += report.node.cyclomatic;
+      report.body.cyclomatic++;
+      this.cyclomatic++;
+      //report.body.lloc += report.node.lloc;
+      //report.body.operators.push(...report.node.operators);
+      //report.body.operands.push(...report.node.operands);
     }
 
     node.complexity = report;
