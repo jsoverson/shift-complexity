@@ -17,27 +17,39 @@ export function analyze(ast) {
 
   stats.root = computeStats({
     cyclomatic: decoratedAst.complexity.body.cyclomatic,
-    operators: decoratedAst.complexity.body.operators,
-    operands: decoratedAst.complexity.body.operands,
+    numOperators: decoratedAst.complexity.body.operators.length,
+    numOperands: decoratedAst.complexity.body.operands.length,
+    numDistinctOperators: uniq(decoratedAst.complexity.body.operators).length,
+    numDistinctOperands: uniq(decoratedAst.complexity.body.operands).length,
     lloc: decoratedAst.complexity.body.lloc,
   });
   
-  stats.average = {
-    complexity: calculateAverage('cyclomatic', reducer, decoratedAst),
-    lloc: calculateAverage('lloc', reducer, decoratedAst),
-    functionComplexity: calculateAverage('cyclomatic', reducer, null),
-    functionLloc: calculateAverage('lloc', reducer, null)
-  };
+  stats.root.operators = decoratedAst.complexity.body.operators;
+  stats.root.operands = decoratedAst.complexity.body.operands;
   
   stats.total = computeStats({
     cyclomatic: reducer.cyclomatic,
     lloc: reducer.lloc,
-    operators: reducer.operators,
-    operands: reducer.operands,
-    distinctOperators: uniq(reducer.operators),
-    distinctOperands: uniq(reducer.operands),
+    numOperators: reducer.operators.length,
+    numOperands: reducer.operands.length,
+    numDistinctOperators: uniq(reducer.operators).length,
+    numDistinctOperands: uniq(reducer.operands).length,
   });
+
+  stats.total.operators = reducer.operators;
+  stats.total.operands = reducer.operands;
   
+  var numScopes = reducer.functions.length + 1;
+
+  stats.average = computeStats({
+    cyclomatic: stats.total.cyclomatic / numScopes,
+    lloc: stats.total.lloc / numScopes,
+    numOperands: stats.total.numOperands / numScopes,
+    numOperators: stats.total.numOperators / numScopes,
+    numDistinctOperands: stats.total.numDistinctOperands / numScopes,
+    numDistinctOperators: stats.total.numDistinctOperators / numScopes,
+  });
+
   stats.functions = summarizeFunctions(reducer);
   stats._ = {
     ast : decoratedAst,
@@ -47,33 +59,30 @@ export function analyze(ast) {
   return stats;
 }
 
-function isRootNode(ast) {
-  return ast.type === 'Module' || ast.type === 'Script';
-}
-
-function calculateAverage(prop, reducer, ast) {
-  let scopes = reducer.functions.concat();
-  if (ast && isRootNode(ast)) scopes.push(ast);
-  //console.log('property : %s', prop);
-  //console.log(scopes.length);
-  //console.log(scopes);
-
-  var total = scopes.reduce((p,n) => p + n.complexity.body[prop], 0);
-  return total / scopes.length;
-}
-
 function summarizeFunctions(reducer) {
-  return reducer.functions.map(fn => computeStats(fn.complexity.body));
+  return reducer.functions.map(fn => {
+    var stats = computeStats({
+      cyclomatic: fn.complexity.body.cyclomatic,
+      numOperators: fn.complexity.body.operators.length,
+      numOperands: fn.complexity.body.operands.length,
+      numDistinctOperators: uniq(fn.complexity.body.operators).length,
+      numDistinctOperands: uniq(fn.complexity.body.operands).length,
+      lloc: fn.complexity.body.lloc,
+    });
+    stats.operators = fn.complexity.body.operators;
+    stats.operands = fn.complexity.body.operands;
+    return stats;
+  });
 }
 
 function computeStats(stats) {
   var computed = {
     lloc: stats.lloc,
-    cyclomatic: stats.cyclomatic,
-    operators: stats.operators,
-    operands: stats.operands,
-    distinctOperators: uniq(stats.operators),
-    distinctOperands: uniq(stats.operands),
+    cyclomatic: stats.cyclomatic, 
+    numOperators: stats.numOperators,
+    numOperands: stats.numOperands,
+    numDistinctOperators: stats.numDistinctOperators,
+    numDistinctOperands: stats.numDistinctOperands,
     vocabulary:0,
     length:0,
     volume:0,
@@ -84,12 +93,12 @@ function computeStats(stats) {
     maintainability:0,
   };
   
-  computed.vocabulary = computed.distinctOperands.length + computed.distinctOperators.length;
-  computed.length = computed.operands.length + computed.operators.length;
+  computed.vocabulary = computed.numDistinctOperands + computed.numDistinctOperators;
+  computed.length = computed.numOperands + computed.numOperators;
   computed.volume = computed.length === 0 ? 0 : computed.length * (Math.log(computed.vocabulary) / Math.LN2);
-  computed.difficulty = computed.distinctOperands.length === 0 ? 
+  computed.difficulty = computed.numDistinctOperands === 0 ? 
     0 : 
-    (computed.distinctOperators.length / 2) * (computed.operators.length / computed.distinctOperands.length);
+    (computed.numDistinctOperators / 2) * (computed.numOperators / computed.numDistinctOperands);
   computed.effort = computed.difficulty * computed.volume;
   computed.time = 1000 * (computed.effort / 18);
   computed.bugs = Math.pow(computed.effort, 2/3) / 3000;

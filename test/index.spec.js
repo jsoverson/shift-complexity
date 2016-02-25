@@ -25,17 +25,15 @@ suite('module:', function () {
       assert.equal(report.functions[0].lloc, 0);
       assert.equal(report.functions[0].cyclomatic, 1);
       assert.equal(report.functions[0].maintainability.toFixed(2), 100.00);
-      assert.equal(report.average.complexity, 1);
-      assert.equal(report.average.functionComplexity, 1);
+      assert.equal(report.average.cyclomatic, 1);
       assert.equal(report.average.lloc, .5);
-      assert.equal(report.average.functionLloc, 0);
     });
 
     test('simple module', function () {
       var report = complexity.analyze(parse('if (a) {b} else {c}'));
       assert.equal(report.root.lloc, 4);
       assert.equal(report.root.cyclomatic, 2);
-      assert.equal(report.average.complexity, 2);
+      assert.equal(report.average.cyclomatic, 2);
       assert.equal(report.average.lloc, 4);
     });
 
@@ -49,14 +47,12 @@ suite('module:', function () {
       assert.equal(report.functions[0].cyclomatic, 2);
       assert.equal(report.functions[1].lloc, 5);
       assert.equal(report.functions[1].cyclomatic, 3);
-      assert.equal(report.total.operators.length, 8);
-      assert.equal(report.total.operands.length, 10);
-      assert.equal(report.total.distinctOperators.length, 5);
-      assert.equal(report.total.distinctOperands.length, 7);
-      assert.equal(report.average.complexity, 6/3);
-      assert.equal(report.average.functionComplexity, 2.5);
+      assert.equal(report.total.numOperators, 8);
+      assert.equal(report.total.numOperands, 10);
+      assert.equal(report.total.numDistinctOperators, 5);
+      assert.equal(report.total.numDistinctOperands, 7);
+      assert.equal(report.average.cyclomatic, 6/3);
       assert.equal(report.average.lloc, 11/3);
-      assert.equal(report.average.functionLloc, 4.5);
     });
     
     test('multi function2', function(){
@@ -68,20 +64,18 @@ suite('module:', function () {
 
       var report = run(src);
 
-      assert.equal(report.average.complexity, 6/3);
-      assert.equal(report.average.functionComplexity, 2);
+      assert.equal(report.average.cyclomatic, 6/3);
       assert.equal(report.average.lloc, 9/5);
-      assert.equal(report.average.functionLloc, 1);
       assert.equal(report.functions[0].lloc, 1);
       assert.equal(report.functions[0].cyclomatic, 2);
       assert.equal(report.functions[1].lloc, 1);
       assert.equal(report.functions[1].cyclomatic, 2);
       assert.equal(report.root.cyclomatic, 2);
       assert.equal(report.root.maintainability.toFixed(2), 74.34);
-      assert.equal(report.total.operators.length, 9);
-      assert.equal(report.total.operands.length, 9);
-      assert.equal(report.total.distinctOperators.length, 2);
-      assert.equal(report.total.distinctOperands.length, 5);
+      assert.equal(report.total.numOperators, 9);
+      assert.equal(report.total.numOperands, 9);
+      assert.equal(report.total.numDistinctOperators, 2);
+      assert.equal(report.total.numDistinctOperands, 5);
       
     });
   });
