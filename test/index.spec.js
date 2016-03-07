@@ -44,9 +44,12 @@ suite('module:', function () {
       );
 
       assert.equal(report.functions[0].lloc, 4);
+      assert.equal(report.functions[0].name, 'c');
       assert.equal(report.functions[0].cyclomatic, 2);
       assert.equal(report.functions[1].lloc, 5);
+      assert.equal(report.functions[1].name, 'z');
       assert.equal(report.functions[1].cyclomatic, 3);
+      assert.equal(report.functions[1].node.type, 'FunctionDeclaration');
       assert.equal(report.total.numOperators, 8);
       assert.equal(report.total.numOperands, 10);
       assert.equal(report.total.numDistinctOperators, 5);
@@ -60,21 +63,24 @@ suite('module:', function () {
         'function a() {if (1) {}}\n' +
         'function b() {if (1) {}}\n' +
         'function c() {if (1) {}}\n' +
-        'function d() {if (1) {}}\n';
+        '(function () {if (1) {}}())\n';
 
       var report = run(src);
 
       assert.equal(report.average.cyclomatic, 6/3);
-      assert.equal(report.average.lloc, 9/5);
+      assert.equal(report.average.lloc, 10/5);
       assert.equal(report.functions[0].lloc, 1);
       assert.equal(report.functions[0].cyclomatic, 2);
+      assert.equal(report.functions[0].name, 'a');
       assert.equal(report.functions[1].lloc, 1);
       assert.equal(report.functions[1].cyclomatic, 2);
+      assert.equal(report.functions[1].name, 'b');
+      assert.equal(report.functions[3].name, '<anonymous>');
       assert.equal(report.root.cyclomatic, 2);
-      assert.equal(report.root.maintainability.toFixed(2), 74.34);
-      assert.equal(report.total.numOperators, 9);
+      assert.equal(report.root.maintainability.toFixed(2), 72.12);
+      assert.equal(report.total.numOperators, 10);
       assert.equal(report.total.numOperands, 9);
-      assert.equal(report.total.numDistinctOperators, 2);
+      assert.equal(report.total.numDistinctOperators, 3);
       assert.equal(report.total.numDistinctOperands, 5);
       
     });

@@ -71,6 +71,8 @@ function summarizeFunctions(reducer) {
     });
     stats.operators = fn.complexity.body.operators;
     stats.operands = fn.complexity.body.operands;
+    stats.name = fn.name ? fn.name.name : '<anonymous>';
+    stats.node = fn;
     return stats;
   });
 }
